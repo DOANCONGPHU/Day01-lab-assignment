@@ -12,6 +12,19 @@ Instructions:
 import os
 import time
 from typing import Any, Callable
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+def _get_openai_api_key() -> str:
+    api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "Missing API key. Add OPENAI_API_KEY=... to .env or set it in your shell."
+        )
+    return api_key
+
 
 # ---------------------------------------------------------------------------
 # Estimated costs per 1K OUTPUT tokens (USD) — update if pricing changes
@@ -56,12 +69,9 @@ def call_openai(
     #       measure start/end time, return (response_text, latency)
     from openai import OpenAI
 
-    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
     # Initialize the client to connect to OpenAI API service
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_API_KEY
-    )
+    client = OpenAI(api_key=_get_openai_api_key())
     # Measure start time
     start_time = time.time()
     
@@ -202,16 +212,20 @@ def streaming_chatbot() -> None:
     # TODO: enter while-loop, read user input, stream response, maintain history
     from openai import OpenAI
     
-    API_KEY = os.getenv("OPENAI_API_KEY")
-    client = OpenAI(api_key=API_KEY)
-    
+    client = None
     history = []
 
     while True:
-        user_input = input("\nYou: ")
+        user_input = input("\nYou: ").strip()
 
         if user_input.lower() in ["quit", "exit"]:
             break
+
+        if not user_input:
+            continue
+
+        if client is None:
+            client = OpenAI(api_key=_get_openai_api_key())
 
         history.append({
             "role": "user",
